@@ -43,10 +43,7 @@ export class ShorturlController {
       throw new NotFoundException('Short URL not found or expired.');
     }
 
-    // Record click event (referrer/location could be extracted properly here)
     this.shorturlService.simulateClick(shortcode, 'direct', 'unknown');
-
-    // Redirect user
     return res.redirect(originalUrl);
   }
 }
