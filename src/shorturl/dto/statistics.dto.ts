@@ -1,7 +1,6 @@
-// For response shape
 export class ShortUrlStatisticsDto {
   shortLink: string;
-  expiry: string; // ISO8601 timestamp
+  expiry: string;
   url: string;
   creationDate: string;
   clickCount: number;

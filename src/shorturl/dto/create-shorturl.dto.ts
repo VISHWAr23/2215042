@@ -1,5 +1,5 @@
 export class CreateShortUrlDto {
   url: string;
-  validity?: number; // in minutes
-  shortcode?: string;
+  validity?: number; 
+  shortcode?: string; 
 }

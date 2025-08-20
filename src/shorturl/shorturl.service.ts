@@ -1,20 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateShortUrlDto } from './dto/create-shorturl.dto';
 import { ShortUrlStatisticsDto } from './dto/statistics.dto';
 
 @Injectable()
 export class ShorturlService {
-  private links = new Map<string, any>(); // In-memory DB
-  private clicks = new Map<string, any[]>(); // Click data
+  private links = new Map<string, any>();
+  private clicks = new Map<string, any[]>();
 
   create(createShortUrlDto: CreateShortUrlDto) {
-    const validity = createShortUrlDto.validity || 30;
-    let shortcode = createShortUrlDto.shortcode || Math.random().toString(36).substr(2, 6);
-    if (this.links.has(shortcode)) {
-      shortcode = Math.random().toString(36).substr(2, 6); // Ensures unique code
+    const validity = createShortUrlDto.validity ?? 30;
+    let shortcode = createShortUrlDto.shortcode || this.generateShortCode();
+
+    while (this.links.has(shortcode)) {
+      shortcode = this.generateShortCode();
     }
+
     const now = new Date();
     const expiry = new Date(now.getTime() + validity * 60000).toISOString();
+
     this.links.set(shortcode, {
       url: createShortUrlDto.url,
       expiry,
@@ -23,8 +26,9 @@ export class ShorturlService {
       shortcode,
     });
     this.clicks.set(shortcode, []);
+
     return {
-      shortLink: `https://localhost:3000/${shortcode}`,
+      shortLink: `http://localhost:3000/${shortcode}`,
       expiry,
     };
   }
@@ -32,10 +36,10 @@ export class ShorturlService {
   findStats(shortcode: string): ShortUrlStatisticsDto {
     const data = this.links.get(shortcode);
     if (!data) {
-      throw new Error(`Shortcode '${shortcode}' not found.`);
+      throw new NotFoundException(`Shortcode '${shortcode}' not found.`);
     }
     return {
-      shortLink: `https://hostname:port/${shortcode}`,
+      shortLink: `http://localhost:3000/${shortcode}`,
       expiry: data.expiry,
       url: data.url,
       creationDate: data.creationDate,
@@ -44,18 +48,35 @@ export class ShorturlService {
     };
   }
 
-  // Simulate a click event for demonstration purposes
+  getOriginalUrl(shortcode: string): string | null {
+    const data = this.links.get(shortcode);
+    if (!data) return null;
+
+    if (new Date() > new Date(data.expiry)) {
+      return null;
+    }
+
+    return data.url;
+  }
+
   simulateClick(shortcode: string, referrer: string, location: string) {
     if (!this.links.has(shortcode)) return;
-    this.links.get(shortcode).clickCount += 1;
-    const evt = {
+
+    const data = this.links.get(shortcode);
+    data.clickCount++;
+    let clickArr = this.clicks.get(shortcode);
+    if (!clickArr) {
+      clickArr = [];
+      this.clicks.set(shortcode, clickArr);
+    }
+    clickArr.push({
       timestamp: new Date().toISOString(),
       referrer,
       location,
-    };
-    const clickArr = this.clicks.get(shortcode);
-    if (clickArr) {
-      clickArr.push(evt);
-    }
+    });
+  }
+
+  private generateShortCode(length = 6): string {
+    return Math.random().toString(36).substr(2, length);
   }
 }
